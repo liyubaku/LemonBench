@@ -23,89 +23,13 @@
 # (1) wget -qO- https://ilemonrain.com/download/shell/LemonBench.sh | bash
 # (2) curl -fsSL https://ilemonrain.com/download/shell/LemonBench.sh | bash
 #
-# 更新日志：
-# 20190722 BetaVersion
-# [F] 修复了部分系统下，通过"apt-get install speedtest-cli"后无法正确判断安装状态的问题 (感谢 Drcai 反馈问题)
-#
-# 20190720 BetaVersion
-# [F] 修复了btfast和btfull参数不能正确启动测试的BUG (感谢 Chikage 反馈问题)
-# [F] 修正了几处文案错误 (感谢 Chikage 反馈问题)
-# [F] 彻底从完整测试中移除Spoofer测试项目
-#    （但你可以通过 --spoofer 参数单独启动此项测试）
-#
-# 20190719 BetaVersion
-# [M] 出于安全性考虑，从完整测试中移除Spoofer测试项目
-#    （但你可以通过 --spoofer 参数单独启动此项测试）
-# [F] 针对 "This version of ssl does not support certificate hostname verification."
-#     报错，增加了一个测试性的补丁，以期避免编译失败
-#
-# 20190712 BetaVersion
-# [+] 增加流媒体解锁测试模块 (目前支持HBO Now和巴哈姆特动画疯测试)
-# [F] 修复失效的Speedtest节点
-# [F] 大量的Bug Fix (怕不是作者天生自带BUG体质 QAQ)
-# [-] 撤销了Netflix解锁测试 (已证实测试方法无效)
-#
-# 20190703 BetaVersion
-# [+] 实验性增加Netflix解锁测试
-# [-] 撤销了基于自建节点的Speedtest测试和iPerf3测试
-#
-# 20190609 BetaVersion
-# [+] 增加了基于自建节点的Speedtest测试和iPerf3测试 (Beta)
-#
-# 20190608 BetaVersion
-# [M] 对生成报告中的本机IP进行打码, 保护测试节点IP
-# [M] 调整路由追踪测试中的IPV6节点
-# [F] 修复路由追踪测试在32位系统中无法使用的问题
-#
-# 20190607 BetaVersion:
-# [+] 增加了CPU状态信息显示的功能 (Beta)
-# [M] 修改Speedtest模块在遇到错误时的响应动作
-#
-# 20190521 BetaVersion：
-# [F] 修复了部分无效的路由测试节点和Speedtest节点
-# [F] 修复了IPV6路由测试无法正常运行的问题
-# [F] 修复了完整内存测试中只能运行5秒的问题 (正常应该为30秒)
-#
-# 20190516 BetaVersion:
-# [F] 修复了生成报告输出异常的问题
-#
-# 20190513 BetaVersion:
-# [+] 增加本地/云端测试结果导出功能 (Beta)
-# [M] Speedtest模块针对低内存环境增加提示
-# [F] 修复了SysBench模块在部分平台出现Warning提示的问题
-#
-# 20190509 BetaVersion:
-# [U] 更新Spoofer模块到 1.4.4 版本
-# [M] Spoofer模块针对64位系统使用预编译包, 32位系统使用即时编译包
-#
-# 20190410 BetaVersion:
-# [M] 针对新网站域名架构, 修改了镜像源地址
-#
-# 20190409 BetaVersion:
-# [M] 路由追踪完整测试增加测试节点
-# [F] 路由追踪测试修复无法进行IPV6测试的BUG
-#
-# 20190407 BetaVersion:
-# [F] 修复Spoofer无法获取结果的BUG
-#
-# 20190406 BetaVersion:
-# [+] 增加CPU/内存性能测试
-# [M] 调整测试顺序
-#
-# 20190405 BetaVersion:
-# [F] 修复Speedtest测试一处失效节点
-#
-# 20190404 BetaVersion:
-# [+] 针对物理服务器, 增加了虚拟化检测
-# [+] 增加了对IPV6的支持
-# [+] 增加网络信息模块
-# [F] 修复了几处检测BUG
-#
 # === 全局定义 =====================================
 
 # 全局参数定义
-BuildTime="20190722 BetaVersion"
+BuildTime="20190814 BetaVersion"
 WorkDir="/tmp/.LemonBench"
+UA_LemonBench="LemonBench/${BuildTime}"
+UA_Browser="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36"
 
 # 字体颜色定义
 Font_Black="\033[30m"
@@ -164,18 +88,25 @@ Global_TrapSigExit_Sig15() {
     exit 1
 }
 
-# 简易JSON解析器
+# 简易JSON解析器 (Deprecated)
+# PharseJSON() {
+#    # 使用方法: PharseJSON "要解析的原JSON文本" "要解析的键值"
+#    # Example: PharseJSON ""Value":"123456"" "Value" [返回结果: 123456]
+#    echo -n $1 | grep -oP '(?<='$2'":)[0-9A-Za-z]+'
+#    if [ "$?" = "1" ]; then
+#        echo -n $1 | grep -oP ''$2'[" :]+\K[^"]+'
+#        if [ "$?" = "1" ]; then
+#            echo -n "null"
+#            return 1
+#        fi
+#    fi
+#}
+
+# 新版JSON解析
 PharseJSON() {
     # 使用方法: PharseJSON "要解析的原JSON文本" "要解析的键值"
     # Example: PharseJSON ""Value":"123456"" "Value" [返回结果: 123456]
-    echo -n $1 | grep -oP '(?<='$2'":)[0-9A-Za-z]+'
-    if [ "$?" = "1" ]; then
-        echo -n $1 | grep -oP ''$2'[" :]+\K[^"]+'
-        if [ "$?" = "1" ]; then
-            echo -n "null"
-            return 1
-        fi
-    fi
+    echo -n $1 | jq -r .$2
 }
 
 # Ubuntu PasteBin 提交工具
@@ -215,8 +146,8 @@ Global_StartupInit_Action() {
     mkdir ${WorkDir}/
     echo -e "${Msg_Info}正在检查必需环境 ..."
     Check_Virtwhat
+    Check_JSONQuery
     Check_Speedtest
-    Check_iPerf3
     Check_BestTrace
     Check_Spoofer
     Check_SysBench
@@ -336,7 +267,7 @@ SystemInfo_GetMemInfo() {
     LBench_Result_SwapTotal_MB="$(echo $LBench_Result_SwapTotal_KB | awk '{printf "%.2f\n",$1/1024}')"
     LBench_Result_SwapTotal_GB="$(echo $LBench_Result_SwapTotal_KB | awk '{printf "%.2f\n",$1/1048576}')"
     # 获取可用Swap
-    LBench_Result_SwapFree_KB="$($ReadMemInfo | awk '/SwapTotal/{print $2}')"
+    LBench_Result_SwapFree_KB="$($ReadMemInfo | awk '/SwapFree/{print $2}')"
     LBench_Result_SwapFree_MB="$(echo $LBench_Result_SwapFree_KB | awk '{printf "%.2f\n",$1/1024}')"
     LBench_Result_SwapFree_GB="$(echo $LBench_Result_SwapFree_KB | awk '{printf "%.2f\n",$1/1048576}')"
     # 获取已用Swap
@@ -473,8 +404,8 @@ SystemInfo_GetDiskStat() {
 }
 
 SystemInfo_GetNetworkInfo() {
-    LBench_Result_LocalIP_IPV4="$(curl --connect-timeout 10 -s http://ipv4.whatismyip.akamai.com/)"
-    LBench_Result_LocalIP_IPV6="$(curl --connect-timeout 10 -s http://ipv6.whatismyip.akamai.com/)"
+    LBench_Result_LocalIP_IPV4="$(curl --connect-timeout 5 -fsSL4 http://api-ipv4.ip.sb)"
+    LBench_Result_LocalIP_IPV6="$(curl --connect-timeout 5 -fsSL6 http://api-ipv6.ip.sb)"
     # 判断三种网络情况：
     # - IPV4 Only：只有IPV4
     # - IPV6 Only：只有IPV6
@@ -483,38 +414,38 @@ SystemInfo_GetNetworkInfo() {
     # 判断IPV4 Only
     if [ "${LBench_Result_LocalIP_IPV4}" != "" ] && [ "${LBench_Result_LocalIP_IPV6}" = "" ]; then
         LBench_Result_NetworkStat="ipv4only"
-        local IPAPI_Result_IPV4="$(curl -fsL4 --connect-timeout 10 http://ipapi.co/json/)"
+        local IPAPI_Result_IPV4="$(curl -fsL4 --connect-timeout 5 https://api-ipv4.ip.sb/geoip/)"
     # 判断IPV6 Only
     elif [ "${LBench_Result_LocalIP_IPV4}" = "" ] && [ "${LBench_Result_LocalIP_IPV6}" != "" ]; then
         LBench_Result_NetworkStat="ipv6only"
-        local IPAPI_Result_IPV6="$(curl -fsL6 --connect-timeout 10 http://ipapi.co/json/)"
+        local IPAPI_Result_IPV6="$(curl -fsL6 --connect-timeout 5 https://api-ipv6.ip.sb/geoip)"
     # 判断双栈
     elif [ "${LBench_Result_LocalIP_IPV4}" != "" ] && [ "${LBench_Result_LocalIP_IPV6}" != "" ]; then
         LBench_Result_NetworkStat="dualstack"
-        local IPAPI_Result_IPV4="$(curl -fsL4 --connect-timeout 10 http://ipapi.co/json/)"
-        local IPAPI_Result_IPV6="$(curl -fsL6 --connect-timeout 10 http://ipapi.co/json/)"
+        local IPAPI_Result_IPV4="$(curl -fsL4 --connect-timeout 5 https://api-ipv4.ip.sb/geoip/)"
+        local IPAPI_Result_IPV6="$(curl -fsL6 --connect-timeout 5 https://api-ipv6.ip.sb/geoip/)"
     # 返回未知值
     else
         LBench_Result_NetworkStat="unknown"
     fi
     # 提取IPV4信息
     if [ "${IPAPI_Result_IPV4}" != "" ]; then
-        IPAPI_IPV4_ip="$(PharseJSON "${IPAPI_Result_IPV4}" "ip")"
+        IPAPI_IPV4_IP="$(PharseJSON "${IPAPI_Result_IPV4}" "ip")"
         IPAPI_IPV4_city="$(PharseJSON "${IPAPI_Result_IPV4}" "city")"
         IPAPI_IPV4_region="$(PharseJSON "${IPAPI_Result_IPV4}" "region")"
         IPAPI_IPV4_country="$(PharseJSON "${IPAPI_Result_IPV4}" "country")"
-        IPAPI_IPV4_country_name="$(PharseJSON "${IPAPI_Result_IPV4}" "country_name")"
+        IPAPI_IPV4_country_code="$(PharseJSON "${IPAPI_Result_IPV4}" "country_code")"
         IPAPI_IPV4_asn="$(PharseJSON "${IPAPI_Result_IPV4}" "asn")"
-        IPAPI_IPV4_org="$(PharseJSON "${IPAPI_Result_IPV4}" "org")"
+        IPAPI_IPV4_organization="$(PharseJSON "${IPAPI_Result_IPV4}" "organization")"
     fi
     if [ "${IPAPI_Result_IPV6}" != "" ]; then
         IPAPI_IPV6_ip="$(PharseJSON "${IPAPI_Result_IPV6}" "ip")"
         IPAPI_IPV6_city="$(PharseJSON "${IPAPI_Result_IPV6}" "city")"
         IPAPI_IPV6_region="$(PharseJSON "${IPAPI_Result_IPV6}" "region")"
         IPAPI_IPV6_country="$(PharseJSON "${IPAPI_Result_IPV6}" "country")"
-        IPAPI_IPV6_country_name="$(PharseJSON "${IPAPI_Result_IPV6}" "country_name")"
+        IPAPI_IPV6_country_code="$(PharseJSON "${IPAPI_Result_IPV6}" "country_code")"
         IPAPI_IPV6_asn="$(PharseJSON "${IPAPI_Result_IPV6}" "asn")"
-        IPAPI_IPV6_org="$(PharseJSON "${IPAPI_Result_IPV6}" "org")"
+        IPAPI_IPV6_organization="$(PharseJSON "${IPAPI_Result_IPV6}" "organization")"
     fi
 }
 
@@ -634,14 +565,14 @@ Function_ShowSystemInfo() {
 Function_ShowNetworkInfo() {
     echo -e "\n ${Font_Yellow}-> 网络信息${Font_Suffix}\n"
     if [ "${LBench_Result_NetworkStat}" = "ipv4only" ] || [ "${LBench_Result_NetworkStat}" = "dualstack" ]; then
-        echo -e " ${Font_Yellow}IPV4 - 本机IP:${Font_Suffix}\t\t${Font_SkyBlue}[${IPAPI_IPV4_country}] ${IPAPI_IPV4_ip}${Font_Suffix}"
-        echo -e " ${Font_Yellow}IPV4 - ASN信息:${Font_Suffix}\t${Font_SkyBlue}${IPAPI_IPV4_asn} (${IPAPI_IPV4_org})${Font_Suffix}"
-        echo -e " ${Font_Yellow}IPV4 - 归属地:${Font_Suffix}\t\t${Font_SkyBlue}${IPAPI_IPV4_country_name}, ${IPAPI_IPV4_region}, ${IPAPI_IPV4_city}${Font_Suffix}"
+        echo -e " ${Font_Yellow}IPV4 - 本机IP:${Font_Suffix}\t\t${Font_SkyBlue}[${IPAPI_IPV4_country_code}] ${IPAPI_IPV4_IP}${Font_Suffix}"
+        echo -e " ${Font_Yellow}IPV4 - ASN信息:${Font_Suffix}\t${Font_SkyBlue}AS${IPAPI_IPV4_asn} (${IPAPI_IPV4_organization})${Font_Suffix}"
+        echo -e " ${Font_Yellow}IPV4 - 归属地:${Font_Suffix}\t\t${Font_SkyBlue}${IPAPI_IPV4_country}, ${IPAPI_IPV4_region}${Font_Suffix}"
     fi
     if [ "${LBench_Result_NetworkStat}" = "ipv6only" ] || [ "${LBench_Result_NetworkStat}" = "dualstack" ]; then
-        echo -e " ${Font_Yellow}IPV6 - 本机IP:${Font_Suffix}\t\t${Font_SkyBlue}[${IPAPI_IPV6_country}] ${IPAPI_IPV6_ip}${Font_Suffix}"
-        echo -e " ${Font_Yellow}IPV6 - ASN信息:${Font_Suffix}\t${Font_SkyBlue}${IPAPI_IPV6_asn} (${IPAPI_IPV6_org})${Font_Suffix}"
-        echo -e " ${Font_Yellow}IPV6 - 归属地:${Font_Suffix}\t\t${Font_SkyBlue}${IPAPI_IPV6_country_name}, ${IPAPI_IPV6_region}, ${IPAPI_IPV6_city}${Font_Suffix}"
+        echo -e " ${Font_Yellow}IPV6 - 本机IP:${Font_Suffix}\t\t${Font_SkyBlue}[${IPAPI_IPV6_country_code}] ${IPAPI_IPV6_ip}${Font_Suffix}"
+        echo -e " ${Font_Yellow}IPV6 - ASN信息:${Font_Suffix}\t${Font_SkyBlue}AS${IPAPI_IPV6_asn} (${IPAPI_IPV6_organization})${Font_Suffix}"
+        echo -e " ${Font_Yellow}IPV6 - 归属地:${Font_Suffix}\t\t${Font_SkyBlue}${IPAPI_IPV6_country}, ${IPAPI_IPV6_region}${Font_Suffix}"
     fi
     # 执行完成, 标记FLAG
     LBench_Flag_FinishNetworkInfo="1"
@@ -678,6 +609,8 @@ Function_MediaUnlockTest() {
     echo -e " "
     Function_MediaUnlockTest_HBONow
     Function_MediaUnlockTest_BahamutAnime
+    Function_MediaUnlockTest_BilibiliHKMCTW
+    Function_MediaUnlockTest_BilibiliTW
     LBench_Flag_FinishMediaUnlockTest="1"
 }
 
@@ -685,23 +618,23 @@ Function_MediaUnlockTest() {
 Function_MediaUnlockTest_HBONow() {
     echo -n -e " HBONow:\c"
     # 尝试获取成功的结果
-    local result="$(curl -4 -fsSL --max-time 30 --write-out "%{url_effective}\n" --output /dev/null https://play.hbonow.com)"
+    local result="$(curl --user-agent "${UA_Browser}" -4 -fsSL --max-time 30 --write-out "%{url_effective}\n" --output /dev/null https://play.hbonow.com/)"
     if [ "$?" = "0" ]; then
         # 下载页面成功，开始解析跳转
-        if [ "${result}" = "https://play.hbonow.com" ]; then
+        if [ "${result}" = "https://play.hbonow.com" ] || [ "${result}" = "https://play.hbonow.com/" ]; then
             echo -n -e "\r HBO Now:\t\t${Font_Green}是${Font_Suffix}\n"
-            LemonBench_Result_MediaUnlockTest_HBONow="true"
-        elif [ "$result" = "http://hbogeo.cust.footprint.net/hbonow/geo.html" ]; then
+            LemonBench_Result_MediaUnlockTest_HBONow="是"
+        elif [ "${result}" = "http://hbogeo.cust.footprint.net/hbonow/geo.html" ]; then
             echo -n -e "\r HBO Now:\t\t${Font_Red}否${Font_Suffix}\n"
-            LemonBench_Result_MediaUnlockTest_HBONow="false"
+            LemonBench_Result_MediaUnlockTest_HBONow="否"
         else
             echo -n -e "\r HBO Now:\t${Font_Yellow}失败-解析失败${Font_Suffix}\n"
-            LemonBench_Result_MediaUnlockTest_HBONow="fail-parse"
+            LemonBench_Result_MediaUnlockTest_HBONow="测试失败 (解析失败)"
         fi
     else
         # 下载页面失败，返回错误代码
         echo -e "\r HBO Now:\t\t${Font_Yellow}失败-网络连接异常${Font_Suffix}\n"
-        LemonBench_Result_MediaUnlockTest_HBONow="fail-connection"
+        LemonBench_Result_MediaUnlockTest_HBONow="测试失败 (网络连接异常)"
     fi
 }
 
@@ -709,29 +642,80 @@ Function_MediaUnlockTest_HBONow() {
 Function_MediaUnlockTest_BahamutAnime() {
     echo -n -e " 巴哈姆特動畫瘋:\c"
     # 尝试获取成功的结果
-    local result="$(curl -4 --max-time 30 -fsSL https://ani.gamer.com.tw/animePay.php)"
+    local result="$(curl -4 --user-agent "${UA_Browser}" --output /dev/null --write-out "%{url_effective}" --max-time 30 -fsSL https://ani.gamer.com.tw/animePay.php)"
     if [ "$?" = "0" ]; then
-        # 下载页面成功，开始解析关键字
-        result="$(echo ${result} | grep -o "會員登入 - 巴哈姆特")"
-        if [ "$?" = "0" ]; then
+        if [ "${result}" = "https://user.gamer.com.tw/login.php" ]; then
             echo -n -e "\r 巴哈姆特動畫瘋:\t${Font_Green}是${Font_Suffix}\n"
-            LemonBench_Result_MediaUnlockTest_BahamutAnime="true"
-        elif [ "$?" = "1" ]; then
-            # 未能解析到成功的结果，尝试解析失败的结果
-            local result="$(echo ${Result} | grep -o "很抱歉！動畫瘋不支援海外用戶使用付費功能！")"
-            if [ "$?" = "0" ]; then
-                echo -n -e "\r 巴哈姆特動畫瘋:\t${Font_Red}否${Font_Suffix}\n"
-                LemonBench_Result_MediaUnlockTest_BahamutAnime="false"
-            else
-                echo -n -e "\r 巴哈姆特動畫瘋:\t${Font_Yellow}失败-解析失败${Font_Suffix}\n"
-                LemonBench_Result_MediaUnlockTest_BahamutAnime="fail-parse"
-            fi
+            LemonBench_Result_MediaUnlockTest_BahamutAnime="是"
+        elif [ "${result}" = "https://ani.gamer.com.tw/animePay.php" ]; then
+            echo -n -e "\r 巴哈姆特動畫瘋:\t${Font_Red}否${Font_Suffix}\n"
+            LemonBench_Result_MediaUnlockTest_BahamutAnime="否"
+        else
+            echo -n -e "\r 巴哈姆特動畫瘋:\t${Font_Yellow}失败-解析失败${Font_Suffix}\n"
+            LemonBench_Result_MediaUnlockTest_BahamutAnime="测试失败 (解析失败)"
         fi
     else
-        # 下载页面失败，返回错误代码
         echo -e "\r 巴哈姆特動畫瘋:\t${Font_Yellow}失败-网络连接异常${Font_Suffix}\n"
-        LemonBench_Result_MediaUnlockTest_BahamutAnime="fail-connection"
+        LemonBench_Result_MediaUnlockTest_BahamutAnime="测试失败 (网络连接异常)"
     fi
+}
+
+# 流媒体解锁测试-哔哩哔哩港澳台限定
+Function_MediaUnlockTest_BilibiliHKMCTW() {
+    echo -n -e " 哔哩哔哩-港澳台限定:\c"
+    local randsession="$(cat /dev/urandom | head -n 32 | md5sum | head -c 32)"
+    # 尝试获取成功的结果
+    local result="$(curl --user-agent "${UA_Browser}" -4 -fsSL --max-time 30 "https://api.bilibili.com/pgc/player/web/playurl?avid=18281381&cid=29892777&qn=0&type=&otype=json&ep_id=183799&fourk=1&fnver=0&fnval=16&session=${randsession}&module=bangumi")"
+    if [ "$?" = "0" ]; then
+        local result="$(PharseJSON "${result}" "code")"
+        if [ "$?" = "0" ]; then
+            if [ "${result}" = "0" ]; then
+                echo -n -e "\r 哔哩哔哩-港澳台限定:\t${Font_Green}是${Font_Suffix}\n"
+                LemonBench_Result_MediaUnlockTest_BilibiliHKMCTW="是"
+            elif [ "${result}" = "-10403" ]; then
+                echo -n -e "\r 哔哩哔哩-港澳台限定:\t${Font_Red}否${Font_Suffix}\n"
+                LemonBench_Result_MediaUnlockTest_BilibiliHKMCTW="否"
+            else
+                echo -n -e "\r 哔哩哔哩-港澳台限定:\t${Font_Red}失败-返回值异常${Font_Suffix} ${Font_SkyBlue}(${result})${Font_Suffix}\n"
+                LemonBench_Result_MediaUnlockTest_BilibiliHKMCTW="测试失败 (返回值异常)" 
+            fi
+        else
+            echo -n -e "\r 哔哩哔哩-港澳台限定:\t${Font_Red}失败-解析失败${Font_Suffix}\n"
+            LemonBench_Result_MediaUnlockTest_BilibiliHKMCTW="测试失败 (解析失败)"
+        fi
+    else
+        echo -n -e "\r 哔哩哔哩-港澳台限定:\t${Font_Red}失败-网络连接异常${Font_Suffix}\n"
+        LemonBench_Result_MediaUnlockTest_BilibiliHKMCTW="测试失败 (网络连接异常)"        
+    fi   
+}
+
+# 流媒体解锁测试-哔哩哔哩台湾限定
+Function_MediaUnlockTest_BilibiliTW() {
+    echo -n -e " 哔哩哔哩-台湾限定:\c"
+    local randsession="$(cat /dev/urandom | head -n 32 | md5sum | head -c 32)"
+    # 尝试获取成功的结果
+    local result="$(curl --user-agent "${UA_Browser}" -4 -fsSL --max-time 30 "https://api.bilibili.com/pgc/player/web/playurl?avid=50762638&cid=100279344&qn=0&type=&otype=json&ep_id=268176&fourk=1&fnver=0&fnval=16&session=${randsession}&module=bangumi")"
+    if [ "$?" = "0" ]; then
+        local result="$(PharseJSON "${result}" "code")"
+        if [ "$?" = "0" ]; then
+            if [ "${result}" = "0" ]; then
+                echo -n -e "\r 哔哩哔哩-台湾限定:\t${Font_Green}是${Font_Suffix}\n"
+                LemonBench_Result_MediaUnlockTest_BilibiliTW="是"
+            elif [ "${result}" = "-10403" ]; then
+                echo -n -e "\r 哔哩哔哩-台湾限定:\t${Font_Red}否${Font_Suffix}\n"
+                LemonBench_Result_MediaUnlockTest_BilibiliTW="否"
+            else
+                echo -n -e "\r 哔哩哔哩-台湾限定:\t${Font_Red}失败-返回值异常${Font_Suffix} ${Font_SkyBlue}(${result})${Font_Suffix}\n"
+                LemonBench_Result_MediaUnlockTest_BilibiliTW="测试失败 (返回值异常)" 
+            fi
+        else
+            echo -n -e "\r 哔哩哔哩-台湾限定:\t${Font_Red}失败-解析失败${Font_Suffix}\n"
+            LemonBench_Result_MediaUnlockTest_BilibiliTW="测试失败 (解析失败)"
+        fi
+    else
+        echo -n -e "\r 哔哩哔哩-台湾限定:\t${Font_Red}失败-网络连接异常${Font_Suffix}\n"
+        LemonBench_Result_MediaUnlockTest_BilibiliTW="测试失败 (网络连接异常)"        
+    fi   
 }
 
 # =============== Speedtest 部分 ===============
@@ -861,7 +845,6 @@ Function_Speedtest_Full() {
     Run_Speedtest "9484" "东北-吉林联通"
     Run_Speedtest "16167" "东北-沈阳移动"
     Run_Speedtest "17184" "华北-山东联通"
-    Run_Speedtest "4713" "华北-北京移动"
     Run_Speedtest "13704" "华中-南京联通"
     Run_Speedtest "7509" "华中-杭州电信"
     Run_Speedtest "4647" "华中-杭州移动"
@@ -877,63 +860,9 @@ Function_Speedtest_Full() {
     LBench_Flag_FinishSpeedtestFull="1"
 }
 
-# iPerf3 测速模块
-Run_iPerf3() {
-    # 调用方式：Run_iPerf3 "测试服务器" "端口号" "线程数" "测试时长(秒),建议大于5秒" "节点名称(用于显示)"
-    echo -n -e "\r $5-$3线程\t\t"
-    local result_up="$(Function_iPerf3_Action "$1" "$2" "$3" "$4" "F")"
-    echo -n -e "\r $5-$3线程\t\t${Font_SkyBlue}${result_up}${Font_Suffix}\t"
-    local result_down="$(Function_iPerf3_Action "$1" "$2" "$3" "$4" "R")"
-    echo -n -e "\r $5-$3线程\t\t${Font_SkyBlue}${result_up}${Font_Suffix}\t${Font_SkyBlue}${result_down}${Font_Suffix}\n"
-}
-
-Function_iPerf3_Action() {
-    # 调用方式: Function_iPerf3 "测试服务器" "端口号" "线程数" "测试时长(秒)" "测试方向(F/R)"
-    mkdir -p ${WorkDir}/iPerf3/ >/dev/null 2>&1
-    rm -f ${WorkDir}/iPerf3/result.txt
-    local direction="$5"
-    local iPerf3_Exec="/usr/bin/iperf3"
-    if [ "${direction}" = "F" ]; then
-        ${iPerf3_Exec} -c $1 -p $2 -P $3 -t $4 -fM >${WorkDir}/iPerf3/result.txt
-        if [ "$?" = "0" ]; then
-            local iperf3_result="$(cat ${WorkDir}/iPerf3/result.txt | grep "sender" | grep "\[SUM\]" | grep -oE "[0-9]{1,}.[0-9]{1,} MBytes\/sec|[0-9]{1,} MBytes\/sec" | grep -oE "[0-9]{1,}.[0-9]{1,}|[0-9]{1,}.[0-9]")"
-        else
-            echo -n "Fail"
-            exit 1
-        fi
-    elif [ "${direction}" = "R" ]; then
-        ${iPerf3_Exec} -c $1 -p $2 -P $3 -t $4 -fM -R >${WorkDir}/iPerf3/result.txt
-        if [ "$?" = "0" ]; then
-            local iperf3_result="$(cat ${WorkDir}/iPerf3/result.txt | grep "receiver" | grep "\[SUM\]" | grep -oE "[0-9]{1,}.[0-9]{1,} MBytes\/sec|[0-9]{1,} MBytes\/sec" | grep -oE "[0-9]{1,}.[0-9]{1,}|[0-9]{1,}.[0-9]")"
-        else
-            echo -n "Fail"
-            exit 1
-        fi
-    else
-        local iperf3_result="Fail: No direction defined"
-    fi
-    if [ "$?" = "0" ]; then
-        echo -n "${iperf3_result} MB/s"
-    else
-        echo -n "Fail"
-    fi
-}
-
-Function_iPerf3_Fast() {
-    echo -e "\n ${Font_Yellow}-> iPerf3 网速测试 (Beta)${Font_Suffix}\n"
-    echo -e " ${Font_Yellow}节点名称\t\t上传速度\t下载速度${Font_Suffix}"
-    #Run_iPerf3 "testserver.speedtest.ilemonrain.com" "39393" "8" "5" "测试节点"
-}
-
-Function_iPerf3_Full() {
-    echo -e "\n ${Font_Yellow}-> iPerf3 网速测试 (Beta)${Font_Suffix}\n"
-    echo -e " ${Font_Yellow}节点名称\t\t上传速度\t下载速度${Font_Suffix}"
-    #Run_iPerf3 "testserver.speedtest.ilemonrain.com" "39393" "8" "5" "测试节点"
-}
-
 # =============== 磁盘测试 部分 ===============
-Run_DiskTest() {
-    # 调用方式: Run_DiskTest "测试文件名" "块大小" "写入次数" "测试项目名称"
+Run_DiskTest_DD() {
+    # 调用方式: Run_DiskTest_DD "测试文件名" "块大小" "写入次数" "测试项目名称"
     mkdir -p ${WorkDir}/DiskTest/ >/dev/null 2>&1
     SystemInfo_GetVirtType
     mkdir -p /.tmp_LBench/DiskTest >/dev/null 2>&1
@@ -991,8 +920,8 @@ Function_DiskTest_Fast() {
     fi
     echo -e " ${Font_Yellow}测试项目\t\t写入速度\t\t\t\t读取速度${Font_Suffix}"
     echo -e " 测试项目\t\t写入速度\t\t\t\t读取速度" >>${WorkDir}/DiskTest/result.txt
-    Run_DiskTest "100MB.test" "4k" "25600" "100MB-4K块"
-    Run_DiskTest "1000MB.test" "1M" "1000" "1000MB-1M块"
+    Run_DiskTest_DD "100MB.test" "4k" "25600" "100MB-4K块"
+    Run_DiskTest_DD "1000MB.test" "1M" "1000" "1000MB-1M块"
     # 执行完成, 标记FLAG
     LBench_Flag_FinishDiskTestFast="1"
 }
@@ -1008,12 +937,12 @@ Function_DiskTest_Full() {
     fi
     echo -e " ${Font_Yellow}测试项目\t\t写入速度\t\t\t\t读取速度${Font_Suffix}"
     echo -e " 测试项目\t\t写入速度\t\t\t\t读取速度" >>${WorkDir}/DiskTest/result.txt
-    Run_DiskTest "10MB.test" "4k" "2560" "10MB-4K块"
-    Run_DiskTest "10MB.test" "1M" "10" "10MB-1M块"
-    Run_DiskTest "100MB.test" "4k" "25600" "100MB-4K块"
-    Run_DiskTest "100MB.test" "1M" "100" "100MB-1M块"
-    Run_DiskTest "1000MB.test" "4k" "256000" "1000MB-4K块"
-    Run_DiskTest "1000MB.test" "1M" "1000" "1000MB-1M块"
+    Run_DiskTest_DD "10MB.test" "4k" "2560" "10MB-4K块"
+    Run_DiskTest_DD "10MB.test" "1M" "10" "10MB-1M块"
+    Run_DiskTest_DD "100MB.test" "4k" "25600" "100MB-4K块"
+    Run_DiskTest_DD "100MB.test" "1M" "100" "100MB-1M块"
+    Run_DiskTest_DD "1000MB.test" "4k" "256000" "1000MB-4K块"
+    Run_DiskTest_DD "1000MB.test" "1M" "1000" "1000MB-1M块"
     # 执行完成, 标记FLAG
     LBench_Flag_FinishDiskTestFull="1"
 }
@@ -1303,17 +1232,17 @@ Function_GenerateResult() {
     echo -e "${Msg_Info}请稍后, 正在收集结果 ..."
     mkdir -p /tmp/ >/dev/null 2>&1
     mkdir -p ${WorkDir}/result >/dev/null 2>&1
-    Function_GenerateResult_Header
-    Function_GenerateResult_SystemInfo
-    Function_GenerateResult_NetworkInfo
-    Function_GenerateResult_MediaUnlockTest
-    Function_GenerateResult_SysBench_CPUTest
-    Function_GenerateResult_SysBench_MemoryTest
-    Function_GenerateResult_DiskTest
-    Function_GenerateResult_Speedtest
-    Function_GenerateResult_BestTrace
-    Function_GenerateResult_Spoofer
-    Function_GenerateResult_Footer
+    Function_GenerateResult_Header >/dev/null
+    Function_GenerateResult_SystemInfo >/dev/null
+    Function_GenerateResult_NetworkInfo >/dev/null
+    Function_GenerateResult_MediaUnlockTest >/dev/null
+    Function_GenerateResult_SysBench_CPUTest >/dev/null
+    Function_GenerateResult_SysBench_MemoryTest >/dev/null
+    Function_GenerateResult_DiskTest >/dev/null
+    Function_GenerateResult_Speedtest >/dev/null
+    Function_GenerateResult_BestTrace >/dev/null
+    Function_GenerateResult_Spoofer >/dev/null
+    Function_GenerateResult_Footer >/dev/null
     echo -e "${Msg_Info}正在生成测试报告 ..."
     local finalresultfile="${WorkDir}/result/finalresult.txt"
     if [ -f "${WorkDir}/result/00-header.result" ]; then
@@ -1415,44 +1344,35 @@ Function_GenerateResult_SystemInfo() {
 }
 
 Function_GenerateResult_NetworkInfo() {
-    local rfile="${WorkDir}/result/02-networkinfo.result"
     if [ "${LBench_Flag_FinishNetworkInfo}" = "1" ]; then
+        local rfile="${WorkDir}/result/02-networkinfo.result"
         echo -e "\n -> 网络信息\n" >>$rfile
         if [ "${LBench_Result_NetworkStat}" = "ipv4only" ] || [ "${LBench_Result_NetworkStat}" = "dualstack" ]; then
-            local IPAPI_IPV4_IP_Masked="$(echo ${IPAPI_IPV4_ip} | awk -F'.' '{print $1"."$2.".*.*"}')"
-            echo -e " IPV4 - 本机IP:\t\t[${IPAPI_IPV4_country}] ${IPAPI_IPV4_IP_Masked}" >>$rfile
-            echo -e " IPV4 - ASN信息:\t${IPAPI_IPV4_asn} (${IPAPI_IPV4_org})" >>$rfile
-            echo -e " IPV4 - 归属地:\t\t${IPAPI_IPV4_country_name}, ${IPAPI_IPV4_region}, ${IPAPI_IPV4_city}" >>$rfile
+            local IPAPI_IPV4_IP_Masked="$(echo ${IPAPI_IPV4_IP} | awk -F'.' '{print $1"."$2.".*.*"}')"
+            echo -e " IPV4 - 本机IP:\t\t[${IPAPI_IPV4_country_code}] ${IPAPI_IPV4_IP_Masked}" >>$rfile
+            echo -e " IPV4 - ASN信息:\tAS${IPAPI_IPV4_asn} (${IPAPI_IPV4_organization})" >>$rfile
+            echo -e " IPV4 - 归属地:\t\t${IPAPI_IPV4_country}, ${IPAPI_IPV4_region}" >>$rfile
         fi
         if [ "${LBench_Result_NetworkStat}" = "ipv6only" ] || [ "${LBench_Result_NetworkStat}" = "dualstack" ]; then
-            echo -e " " >>$rfile
-            echo -e " IPV6 - 本机IP:\t\t[${IPAPI_IPV6_country}] ${IPAPI_IPV6_ip}" >>$rfile
-            echo -e " IPV6 - ASN信息:\t${IPAPI_IPV6_asn} (${IPAPI_IPV6_org})" >>$rfile
-            echo -e " IPV6 - 归属地:\t\t${IPAPI_IPV6_country_name}, ${IPAPI_IPV6_region}, ${IPAPI_IPV6_city}" >>$rfile
+            echo -e " IPV6 - 本机IP:\t\t[${IPAPI_IPV6_country_code}] ${IPAPI_IPV6_ip}" >>$rfile
+            echo -e " IPV6 - ASN信息:\tAS${IPAPI_IPV6_asn} (${IPAPI_IPV6_organization})" >>$rfile
+            echo -e " IPV6 - 归属地:\t\t${IPAPI_IPV6_country}, ${IPAPI_IPV6_region}" >>$rfile
         fi
     fi
 }
 
 Function_GenerateResult_MediaUnlockTest() {
-    local rfile="${WorkDir}/result/03-mediaunlocktest.result"
-    echo -e "\n -> 流媒体解锁测试\n" >>$rfile
     if [ "${LBench_Flag_FinishMediaUnlockTest}" = "1" ]; then
+        local rfile="${WorkDir}/result/03-mediaunlocktest.result"
+        echo -e "\n -> 流媒体解锁测试\n" >>$rfile
         # HBO Now
-        if [ "${LemonBench_Result_MediaUnlockTest_HBONow}" = "true" ]; then
-            echo -e " HBO Now:\t\t是" >>$rfile
-        elif [ "${LemonBench_Result_MediaUnlockTest_HBONow}" = "false" ]; then
-            echo -e " HBO Now:\t\t否" >>$rfile
-        else
-            echo -e " HBO Now:\t\t测试失败" >>$rfile
-        fi
+        echo -e " HBO Now:\t\t${LemonBench_Result_MediaUnlockTest_HBONow}" >>$rfile
         # 动画疯
-        if [ "${LemonBench_Result_MediaUnlockTest_BahamutAnime}" = "true" ]; then
-            echo -e " 巴哈姆特動畫瘋:\t\t是" >>$rfile
-        elif [ "${LemonBench_Result_MediaUnlockTest_BahamutAnime}" = "false" ]; then
-            echo -e " 巴哈姆特動畫瘋:\t\t否" >>$rfile
-        else
-            echo -e " 巴哈姆特動畫瘋:\t\t测试失败" >>$rfile
-        fi
+        echo -e " 巴哈姆特動畫瘋:\t${LemonBench_Result_MediaUnlockTest_BahamutAnime}" >>$rfile
+        # 哔哩哔哩港澳台
+        echo -e " 哔哩哔哩-港澳台限定:\t${LemonBench_Result_MediaUnlockTest_BilibiliHKMCTW}" >>$rfile
+        # 哔哩哔哩台湾限定
+        echo -e " 哔哩哔哩-台湾限定:\t${LemonBench_Result_MediaUnlockTest_BilibiliTW}" >>$rfile
     fi
 }
 
@@ -1508,6 +1428,7 @@ Check_Virtwhat() {
             yum -y install virt-what
         elif [ "${Var_OSRelease}" = "ubuntu" ] || [ "${Var_OSRelease}" = "debian" ]; then
             echo -e "${Msg_Warning}未检测到Virt-What模块, 正在安装..."
+            apt-get update
             apt-get install -y virt-what
         elif [ "${Var_OSRelease}" = "fedora" ]; then
             echo -e "${Msg_Warning}未检测到Virt-What模块, 正在安装..."
@@ -1574,41 +1495,6 @@ Check_Speedtest() {
     fi
 }
 
-# =============== 检查 iPerf3 组件 ===============
-Check_iPerf3() {
-    iperf3 -v >/dev/null 2>&1
-    if [ "$?" != "0" ]; then
-        SystemInfo_GetOSRelease
-        if [ "${Var_OSRelease}" = "centos" ]; then
-            echo -e "${Msg_Warning}未检测到iPerf3模块, 正在安装..."
-            echo -e "${Msg_Info}正在安装必需环境 ..."
-            yum -y install iperf3
-        elif [ "${Var_OSRelease}" = "ubuntu" ] || [ "${Var_OSRelease}" = "debian" ]; then
-            echo -e "${Msg_Warning}未检测到iPerf3模块, 正在安装..."
-            echo -e "${Msg_Info}正在安装必需环境 ..."
-            apt-get update
-            apt-get --no-install-recommends -y install iperf3
-        elif [ "${Var_OSRelease}" = "fedora" ]; then
-            echo -e "${Msg_Warning}未检测到iPerf3模块, 正在安装..."
-            echo -e "${Msg_Info}正在安装必需环境 ..."
-            dnf -y install iperf3
-        elif [ "${Var_OSRelease}" = "alpinelinux" ]; then
-            echo -e "${Msg_Warning}未检测到iPerf3模块, 正在安装..."
-            echo -e "${Msg_Info}正在安装必需环境 ..."
-            apk update
-            apk add iperf3
-        else
-            echo -e "${Msg_Warning}未检测到iPerf3模块, 但无法确定当前系统分支!"
-        fi
-    fi
-    # 二次检测
-    iperf3 -v >/dev/null 2>&1
-    if [ "$?" != "0" ]; then
-        echo -e "iPerf3模块安装失败! 请尝试重启程序或者手动安装!"
-        exit 1
-    fi
-}
-
 # =============== 检查 BestTrace 组件 ===============
 Check_BestTrace() {
     if [ ! -f "/usr/sbin/besttrace" ]; then
@@ -1627,7 +1513,7 @@ Check_BestTrace() {
             echo -e "${Msg_Info}正在安装必需环境 ..."
             yum -y install curl unzip
             echo -e "${Msg_Info}正在下载BestTrace组件 ..."
-            curl ${DownloadSrc} -o ${WorkDir}/besttrace.gz
+            curl --user-agent "${UA_LemonBench}" ${DownloadSrc} -o ${WorkDir}/besttrace.gz
             echo -e "${Msg_Info}正在安装BestTrace组件 ..."
             gzip -dN ${WorkDir}/besttrace.gz
             mv ${WorkDir}/besttrace /usr/sbin/besttrace
@@ -1640,7 +1526,7 @@ Check_BestTrace() {
             apt-get update
             apt-get --no-install-recommends -y install wget unzip curl ca-certificates
             echo -e "${Msg_Info}正在下载BestTrace组件 ..."
-            curl ${DownloadSrc} -o ${WorkDir}/besttrace.gz
+            curl --user-agent "${UA_LemonBench}" ${DownloadSrc} -o ${WorkDir}/besttrace.gz
             echo -e "${Msg_Info}正在安装BestTrace组件 ..."
             gzip -dN ${WorkDir}/besttrace.gz
             mv ${WorkDir}/besttrace /usr/sbin/besttrace
@@ -1652,7 +1538,7 @@ Check_BestTrace() {
             echo -e "${Msg_Info}正在安装必需环境 ..."
             dnf -y install wget unzip curl
             echo -e "${Msg_Info}正在下载BestTrace组件 ..."
-            curl ${DownloadSrc} -o ${WorkDir}/besttrace.gz
+            curl  --user-agent "${UA_LemonBench}" ${DownloadSrc} -o ${WorkDir}/besttrace.gz
             echo -e "${Msg_Info}正在安装BestTrace组件 ..."
             gzip -dN ${WorkDir}/besttrace.gz
             mv ${WorkDir}/besttrace /usr/sbin/besttrace
@@ -1665,7 +1551,7 @@ Check_BestTrace() {
             apk update
             apk add wget unzip curl
             echo -e "${Msg_Info}正在下载BestTrace组件 ..."
-            curl ${DownloadSrc} -o ${WorkDir}/besttrace.gz
+            curl --user-agent "${UA_LemonBench}" ${DownloadSrc} -o ${WorkDir}/besttrace.gz
             echo -e "${Msg_Info}正在安装BestTrace组件 ..."
             gzip -dN ${WorkDir}/besttrace.gz
             mv ${WorkDir}/besttrace /usr/sbin/besttrace
@@ -1679,6 +1565,60 @@ Check_BestTrace() {
     # 二次检测
     if [ ! -f "/usr/sbin/besttrace" ]; then
         echo -e "BestTrace模块安装失败! 请尝试重启程序或者手动安装!"
+        exit 1
+    fi
+}
+
+# =============== 检查 JSON Query 组件 ===============
+Check_JSONQuery() {
+    if [ ! -f "/usr/bin/jq" ]; then
+        SystemInfo_GetOSRelease
+        SystemInfo_GetSystemBit
+        if [ "${LBench_Result_SystemBit_Short}" = "64" ]; then
+            local DownloadSrc="https://download.ilemonrain.com/LemonBench/include/jq/1.6/amd64/jq.tar.gz"
+        elif [ "${LBench_Result_SystemBit_Short}" = "32" ]; then
+            local DownloadSrc="https://download.ilemonrain.com/LemonBench/include/jq/1.6/i386/jq.tar.gz"
+        else
+            local DownloadSrc="https://download.ilemonrain.com/LemonBench/include/jq/1.6/i386/jq.tar.gz"
+        fi
+        mkdir -p ${WorkDir}/
+        if [ "${Var_OSRelease}" = "centos" ]; then
+            echo -e "${Msg_Warning}未检测到JSON Query模块, 正在安装..."
+            echo -e "${Msg_Info}正在安装必需环境 ..."
+            yum install -y epel-release
+            yum install -y jq
+        elif [ "${Var_OSRelease}" = "ubuntu" ] || [ "${Var_OSRelease}" = "debian" ]; then
+            echo -e "${Msg_Warning}未检测到JSON Query模块, 正在安装..."
+            echo -e "${Msg_Info}正在安装必需环境 ..."
+            apt-get update
+            apt-get install -y jq
+        elif [ "${Var_OSRelease}" = "fedora" ]; then
+            echo -e "${Msg_Warning}未检测到JSON Query模块, 正在安装..."
+            echo -e "${Msg_Info}正在安装必需环境 ..."
+            dnf install -y jq
+        elif [ "${Var_OSRelease}" = "alpinelinux" ]; then
+            echo -e "${Msg_Warning}未检测到JSON Query模块, 正在安装..."
+            echo -e "${Msg_Info}正在安装必需环境 ..."
+            apk update
+            apk add jq
+        else
+            echo -e "${Msg_Warning}未检测到JSON Query模块, 正在安装..."
+            echo -e "${Msg_Info}正在安装必需环境 ..."
+            apk update
+            apk add wget unzip curl
+            echo -e "${Msg_Info}正在下载JSON Query组件 ..."
+            curl --user-agent "${UA_LemonBench}" ${DownloadSrc} -o ${WorkDir}/jq.tar.gz
+            echo -e "${Msg_Info}正在安装JSON Query组件 ..."
+            tar xvf ${WorkDir}/jq.tar.gz
+            mv ${WorkDir}/jq/usr/bin/jq
+            chmod +x /usr/sbin/besttrace
+            echo -e "${Msg_Info}正在清理环境 ..."
+            rm -rf ${WorkDir}/jq.tar.gz
+        fi
+    fi
+    # 二次检测
+    if [ ! -f "/usr/bin/jq" ]; then
+        echo -e "JSON Query模块安装失败! 请尝试重启程序或者手动安装!"
         exit 1
     fi
 }
@@ -1788,10 +1728,10 @@ Check_Spoofer_PreBuild() {
             echo -e "${Msg_Info}正在安装必需组件 ..."
             yum install -y epel-release
             yum install -y protobuf-devel libpcap-devel openssl-devel traceroute wget curl
-            local Spoofer_Version="$(curl -fskSL https://download.ilemonrain.com/LemonBench/include/Spoofer/latest_version)"
+            local Spoofer_Version="$(curl  --user-agent "${UA_LemonBench}" -fskSL https://download.ilemonrain.com/LemonBench/include/Spoofer/latest_version)"
             echo -e "${Msg_Info}正在下载 Spoofer 预编译组件 (版本 ${Spoofer_Version}) ..."
             mkdir -p /tmp/_LBench/src/
-            wget -O /tmp/_LBench/src/spoofer-prober.gz https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/${SysRel}/${SysVer}/${SysBit}/spoofer-prober.gz
+            wget -U "${UA_LemonBench}" -O /tmp/_LBench/src/spoofer-prober.gz https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/${SysRel}/${SysVer}/${SysBit}/spoofer-prober.gz
             echo -e "${Msg_Info}正在安装 Spoofer 组件 ..."
             gzip -dN /tmp/_LBench/src/spoofer-prober.gz
             cp -f /tmp/_LBench/src/spoofer-prober /usr/sbin/spoofer-prober
@@ -1804,10 +1744,10 @@ Check_Spoofer_PreBuild() {
             echo -e "${Msg_Info}正在安装必需组件 ..."
             apt-get update
             apt-get install --no-install-recommends -y ca-certificates libprotobuf-dev libpcap-dev traceroute wget curl
-            local Spoofer_Version="$(curl -fskSL https://download.ilemonrain.com/LemonBench/include/Spoofer/latest_version)"
+            local Spoofer_Version="$(curl  --user-agent "${UA_LemonBench}" -fskSL https://download.ilemonrain.com/LemonBench/include/Spoofer/latest_version)"
             echo -e "${Msg_Info}正在下载 Spoofer 预编译组件 (版本 ${Spoofer_Version}) ..."
             mkdir -p /tmp/_LBench/src/
-            wget -O /tmp/_LBench/src/spoofer-prober.gz https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/${SysRel}/${SysVer}/${SysBit}/spoofer-prober.gz
+            wget -U "${UA_LemonBench}" -O /tmp/_LBench/src/spoofer-prober.gz https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/${SysRel}/${SysVer}/${SysBit}/spoofer-prober.gz
             echo -e "${Msg_Info}正在安装 Spoofer ..."
             gzip -dN /tmp/_LBench/src/spoofer-prober.gz
             cp -f /tmp/_LBench/src/spoofer-prober /usr/sbin/spoofer-prober
@@ -1829,15 +1769,15 @@ Check_Spoofer_InstantBuild() {
         echo -e "${Msg_Info}正在准备编译环境 ..."
         yum install -y epel-release
         yum install -y wget curl make gcc gcc-c++ traceroute openssl-devel protobuf-devel bison flex libpcap-devel
-        local Spoofer_Version="$(curl -fskSL https://download.ilemonrain.com/LemonBench/include/Spoofer/latest_version)"
+        local Spoofer_Version="$(curl  --user-agent "${UA_LemonBench}"  -fskSL https://download.ilemonrain.com/LemonBench/include/Spoofer/latest_version)"
         echo -e "${Msg_Info}正在下载源码包 (版本 ${Spoofer_Version})..."
         mkdir -p /tmp/_LBench/src/
-        wget -qO /tmp/_LBench/src/spoofer.tar.gz https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/spoofer.tar.gz
+        wget -U "${UA_LemonBench}" -qO /tmp/_LBench/src/spoofer.tar.gz https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/spoofer.tar.gz
         echo -e "${Msg_Info}正在编译安装 Spoofer 组件..."
         cd /tmp/_LBench/src/
         tar xvf spoofer.tar.gz && cd spoofer-"${Spoofer_Version}"
         # 测试性补丁
-        wget -qO /tmp/_LBench/src/configure.patch https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/patch/configure.patch
+        wget -U "${UA_LemonBench}" -qO /tmp/_LBench/src/configure.patch https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/patch/configure.patch
         patch -p0 configure /tmp/_LBench/src/configure.patch
         ./configure && make -j ${LBench_Result_CPUThreadNumber}
         cp prober/spoofer-prober /usr/sbin/spoofer-prober
@@ -1848,15 +1788,15 @@ Check_Spoofer_InstantBuild() {
         echo -e "${Msg_Info}正在准备编译环境 ..."
         apt-get update
         apt-get install -y --no-install-recommends wget curl gcc g++ make traceroute protobuf-compiler libpcap-dev libprotobuf-dev openssl libssl-dev ca-certificates
-        local Spoofer_Version="$(curl -fskSL https://download.ilemonrain.com/LemonBench/include/Spoofer/latest_version)"
+        local Spoofer_Version="$(curl --user-agent "${UA_LemonBench}"  -fskSL https://download.ilemonrain.com/LemonBench/include/Spoofer/latest_version)"
         echo -e "${Msg_Info}正在下载源码包 (版本 ${Spoofer_Version})..."
         mkdir -p /tmp/_LBench/src/
-        wget -qO /tmp/_LBench/src/spoofer.tar.gz https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/spoofer.tar.gz
+        wget -U "${UA_LemonBench}" -qO /tmp/_LBench/src/spoofer.tar.gz https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/spoofer.tar.gz
         echo -e "${Msg_Info}正在编译安装 Spoofer 组件..."
         cd /tmp/_LBench/src/
         tar xvf spoofer.tar.gz && cd spoofer-"${Spoofer_Version}"
         # 测试性补丁
-        wget -qO /tmp/_LBench/src/configure.patch https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/patch/configure.patch
+        wget -U "${UA_LemonBench}" -qO /tmp/_LBench/src/configure.patch https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/patch/configure.patch
         patch -p0 configure /tmp/_LBench/src/configure.patch
         ./configure && make -j ${LBench_Result_CPUThreadNumber}
         cp prober/spoofer-prober /usr/sbin/spoofer-prober
@@ -1866,15 +1806,15 @@ Check_Spoofer_InstantBuild() {
         echo -e "${Msg_Info}已检测到系统: ${Var_OSRelease}"
         echo -e "${Msg_Info}正在准备编译环境 ..."
         dnf install -y wget curl make gcc gcc-c++ traceroute openssl-devel protobuf-devel bison flex libpcap-devel
-        local Spoofer_Version="$(curl -fskSL https://download.ilemonrain.com/LemonBench/include/Spoofer/latest_version)"
+        local Spoofer_Version="$(curl --user-agent "${UA_LemonBench}" -fskSL https://download.ilemonrain.com/LemonBench/include/Spoofer/latest_version)"
         echo -e "${Msg_Info}正在下载源码包 (版本 ${Spoofer_Version})..."
         mkdir -p /tmp/_LBench/src/
-        wget -qO /tmp/_LBench/src/spoofer.tar.gz https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/spoofer.tar.gz
+        wget -U "${UA_LemonBench}" -qO /tmp/_LBench/src/spoofer.tar.gz https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/spoofer.tar.gz
         echo -e "${Msg_Info}正在编译安装 Spoofer ..."
         cd /tmp/_LBench/src/
         tar xvf spoofer.tar.gz && cd spoofer-"${Spoofer_Version}"
         # 测试性补丁
-        wget -qO /tmp/_LBench/src/configure.patch https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/patch/configure.patch
+        wget -U "${UA_LemonBench}" -qO /tmp/_LBench/src/configure.patch https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/patch/configure.patch
         patch -p0 configure /tmp/_LBench/src/configure.patch
         ./configure && make -j ${LBench_Result_CPUThreadNumber}
         cp prober/spoofer-prober /usr/sbin/spoofer-prober
@@ -1885,15 +1825,15 @@ Check_Spoofer_InstantBuild() {
         echo -e "${Msg_Info}正在准备编译环境 ..."
         apk update
         apk add traceroute gcc g++ make openssl-dev protobuf-dev libpcap-dev
-        local Spoofer_Version="$(curl -fskSL https://download.ilemonrain.com/LemonBench/include/Spoofer/latest_version)"
+        local Spoofer_Version="$(curl  --user-agent "${UA_LemonBench}"  -fskSL https://download.ilemonrain.com/LemonBench/include/Spoofer/latest_version)"
         echo -e "${Msg_Info}正在下载源码包 (版本 ${Spoofer_Version})..."
         mkdir -p /tmp/_LBench/src/
-        wget -qO /tmp/_LBench/src/spoofer.tar.gz https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/spoofer.tar.gz
+        wget -U "${UA_LemonBench}" -qO /tmp/_LBench/src/spoofer.tar.gz https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/spoofer.tar.gz
         echo -e "${Msg_Info}正在编译安装 Spoofer ..."
         cd /tmp/_LBench/src/
         tar xvf spoofer.tar.gz && cd spoofer-"${Spoofer_Version}"
         # 测试性补丁
-        wget -qO /tmp/_LBench/src/configure.patch https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/patch/configure.patch
+        wget -U "${UA_LemonBench}" -qO /tmp/_LBench/src/configure.patch https://download.ilemonrain.com/LemonBench/include/Spoofer/${Spoofer_Version}/patch/configure.patch
         patch -p0 configure /tmp/_LBench/src/configure.patch
         ./configure && make -j ${LBench_Result_CPUThreadNumber}
         cp prober/spoofer-prober /usr/sbin/spoofer-prober
@@ -1932,7 +1872,7 @@ Check_SysBench() {
                 local downurl="${mirrorbase}/include/${componentname}/${version}/${arch}/${codename}/${filename}"
                 mkdir -p ${WorkDir}/download/
                 pushd ${WorkDir}/download/
-                wget -O ${filenamebase}_${version}_${bit}.deb ${downurl}
+                wget -U "${UA_LemonBench}" -O ${filenamebase}_${version}_${bit}.deb ${downurl}
                 apt-get install -y -f ./${filename}
                 popd
                 if [ ! -f "/usr/bin/sysbench" ]; then
@@ -2109,6 +2049,21 @@ Entrance_Spoofer() {
     Global_Exit_Action
 }
 
+# == 测试 ==
+Entrance_DebugMode() {
+    Global_Startup_Header
+    Global_TestMode="debug"
+    Global_TestModeTips="Debug Mode"
+    Function_GetSystemInfo
+    Function_BenchStart
+    Function_ShowSystemInfo
+    Function_ShowNetworkInfo
+    Function_MediaUnlockTest
+    Function_BenchFinish
+    Function_GenerateResult
+    Global_Exit_Action
+}
+
 #
 Entrance_SysBench_CPU_Fast() {
     Global_Startup_Header
@@ -2188,10 +2143,6 @@ Entrance_HelpDocument() {
     exit 0
 }
 
-Entrance_Debug() {
-    Function_iPerf3_Fast
-}
-
 # =============== 命令行参数 ===============
 case "$1" in
 -f | fast | -fast | --fast)
@@ -2251,7 +2202,7 @@ sbmfull | -sbmfull | --sbmfull | sysbench-memory-full | -sysbench-memory-full | 
     exit 0
     ;;
 debug)
-    Entrance_Debug
+    Entrance_DebugMode
     exit 0
     ;;
 *)
